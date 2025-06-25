@@ -9,7 +9,7 @@ python = "^3.9"
 boto3 = "*"
 botocore = "*"
 inquirerpy = "*"
-typer = {extras = ["all"], version = "*"}
+typer = { extras = ["all"], version = "*" }
 rich = "*"
 humanize = "*"
 python-dateutil = "*"
@@ -17,3 +17,7 @@ appdirs = "*"
 
 [tool.poetry.scripts]
 taproot = "taproot.cli:app"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
