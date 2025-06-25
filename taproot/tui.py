@@ -33,7 +33,7 @@ def pick_instance(instances: list[dict]) -> dict:
         grouped[inst["state"]].append(inst)
 
     order = ["running", "stopped", "pending", "terminated"]
-    choices = []
+    choices: list[dict] = []
     for state in order:
         group = sorted(
             grouped.get(state, []),
@@ -42,10 +42,21 @@ def pick_instance(instances: list[dict]) -> dict:
         )
         if not group:
             continue
-        choices.append({"name": f"--- {state.upper()} ---", "disabled": ""})
+        # section header ─ needs *both* keys
+        choices.append(
+            {
+                "name": f"--- {state.upper()} ---",
+                "value": None,  # <─ add this
+                "disabled": "",  # keeps it non-selectable
+            }
+        )
         for inst in group:
-            label = _label(inst)
-            choices.append({"name": label, "value": inst})
+            choices.append(
+                {
+                    "name": _label(inst),
+                    "value": inst,
+                }
+            )
 
     return inquirer.select(message="Choose instance:", choices=choices).execute()
 
