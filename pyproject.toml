@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "taproot"
+version = "0.1.0"
+description = "A TUI for selecting and connecting to EC2 instances with AWS SSO support"
+authors = ["Your Name <you@example.com>"]
+packages = [{ include = "taproot" }]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+boto3 = "*"
+questionary = "*"
+python-dateutil = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
