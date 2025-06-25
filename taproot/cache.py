@@ -1,3 +1,4 @@
+"""Very small MRU cache for last-used profile / instance."""
 from __future__ import annotations
 
 import json
@@ -18,4 +19,6 @@ def load() -> dict[str, Any]:
 
 def save(profile: str, instance_id: str) -> None:
     _CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    _CACHE_FILE.write_text(json.dumps({"profile": profile, "instance_id": instance_id}))
+    _CACHE_FILE.write_text(
+        json.dumps({"profile": profile, "instance_id": instance_id})
+    )

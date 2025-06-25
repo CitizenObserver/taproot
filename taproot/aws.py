@@ -9,37 +9,38 @@ import botocore
 
 
 def list_profiles() -> list[str]:
-    """Return all configured AWS CLI profiles (falls back to ['default'])."""
+    """Return configured AWS CLI profiles, defaulting to ['default']."""
     profiles = boto3.session.Session().available_profiles
     return profiles if profiles else ["default"]
 
 
 def ensure_credentials(profile: str) -> boto3.Session:
-    """
-    Validate that the chosen profile has active credentials.
-    If they’re expired, run `aws sso login --profile …` once, then retry.
-    """
+    """Validate credentials; perform `aws sso login` once if expired."""
     session = boto3.Session(profile_name=profile)
     sts = session.client("sts")
 
-    def _token_ok() -> bool:
+    def _valid() -> bool:
         try:
             sts.get_caller_identity()
             return True
         except botocore.exceptions.ClientError as exc:
             code = exc.response["Error"]["Code"]
-            return code not in {"ExpiredToken", "InvalidClientTokenId", "UnauthorizedException"}
+            return code not in {
+                "ExpiredToken",
+                "InvalidClientTokenId",
+                "UnauthorizedException",
+            }
 
-    if not _token_ok():
+    if not _valid():
         subprocess.run(["aws", "sso", "login", "--profile", profile], check=True)
-        if not _token_ok():  # second failure → bail early
+        if not _valid():
             raise RuntimeError(f"SSO login failed for profile '{profile}'")
 
     return session
 
 
 def _name_tag(instance: dict) -> str | None:
-    """Extract the Name tag if present."""
+    """Return the value of the 'Name' tag if present."""
     for tag in instance.get("Tags", []):
         if tag.get("Key") == "Name" and tag.get("Value"):
             return tag["Value"]
@@ -47,7 +48,7 @@ def _name_tag(instance: dict) -> str | None:
 
 
 def iter_instances(session: boto3.Session) -> Iterable[dict]:
-    """Yield raw EC2 instance dictionaries across *all* pages."""
+    """Yield raw EC2 instance dictionaries across all pages."""
     ec2 = session.client("ec2")
     paginator = ec2.get_paginator("describe_instances")
     for page in paginator.paginate():
@@ -56,13 +57,10 @@ def iter_instances(session: boto3.Session) -> Iterable[dict]:
 
 
 def collect_instances(session: boto3.Session) -> list[dict]:
-    """
-    Return a simplified list with fields the UI cares about:
-    id, name, state, launch_time (localized).
-    """
-    results = []
+    """Return simplified instance dictionaries for TUI display."""
+    items = []
     for inst in iter_instances(session):
-        results.append(
+        items.append(
             {
                 "id": inst["InstanceId"],
                 "name": _name_tag(inst) or inst["InstanceId"],
@@ -70,4 +68,4 @@ def collect_instances(session: boto3.Session) -> list[dict]:
                 "launch_time": inst["LaunchTime"].astimezone(timezone.utc),
             }
         )
-    return results
+    return items

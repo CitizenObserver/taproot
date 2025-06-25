@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "taproot"
-version = "0.2.0"
-description = "EC2 Instance Connect helper"
+version = "0.3.0"
+description = "TUI helper for AWS EC2 Instance Connect"
 authors = ["Citizen Observer"]
 
 [tool.poetry.dependencies]
