@@ -1,64 +1,50 @@
 from __future__ import annotations
-
 from datetime import timezone
-from typing import Sequence, List, Dict, Any
-
+from typing import List, Dict, Any, Sequence
 import humanize
-from prompt_toolkit.key_binding import KeyBindings
 from InquirerPy import inquirer
 from rich.console import Console
 from rich.theme import Theme
 
 console = Console(theme=Theme({"header": "bold cyan", "dim": "dim"}))
 
-
 class _ProfileChange:
-    """Sentinel used when the user wants to switch profile."""
-
+    pass
 
 PROFILE_CHANGE = _ProfileChange()
 
 COLS = {"name": 25, "age": 16, "state": 10}
 
-
-def _naturaltime(dt) -> str:
+def _naturaltime(dt):
     return humanize.naturaltime(dt.astimezone(timezone.utc))
 
+def _row(i: Dict[str, Any]) -> str:
+    name = i["name"] if i["name"] != i["id"] else f"[dim]{i['name']}[/dim]"
+    age  = _naturaltime(i["launch_time"])
+    return f"{name:<{COLS['name']}} {age:<{COLS['age']}} {i['state']:<{COLS['state']}} {i['id']}"
 
-def _row(inst: Dict[str, Any]) -> str:
-    name = inst["name"] if inst["name"] != inst["id"] else f"[dim]{inst['name']}[/dim]"
-    age = _naturaltime(inst["launch_time"])
-    state = inst["state"]
-    return f"{name:<{COLS['name']}} {age:<{COLS['age']}} {state:<{COLS['state']}} {inst['id']}"
-
-
-def pick_profile(profiles: Sequence[str], default: str | None) -> str:
+def pick_profile(profiles: Sequence[str], default: str | None):
     console.clear()
-    console.print("[header]AWS profile selector (↑↓ move, ⏎ select)[/header]")
+    console.print("[header]AWS profile selector (↑↓, ⏎)[/header]")
     return inquirer.select(
-        message="Choose profile:",
-        choices=list(profiles),
-        default=default,
+        message="Choose profile:", choices=list(profiles), default=default
     ).execute()
 
-
-def pick_instance(instances, profile):
+def pick_instance(instances: List[Dict[str, Any]], profile: str):
     console.clear()
-    console.print(f"Profile: [bold]{profile}[/bold]   (Tab = change profile)\n")
+    console.print(f"Profile: [bold]{profile}[/bold]\n")
 
-    choices = [{"name": _row(i), "value": i} for i in instances]
+    running = [j for j in instances if j["state"] == "running"]
+    others  = [j for j in instances if j["state"] != "running"]
+    running.sort(key=lambda x: x["launch_time"], reverse=True)
+    others.sort(key=lambda x: x["launch_time"], reverse=True)
 
-    # ─── Tab key ⇢ switch profile ──────────────────────────────────────────────
-    def _exit_tab(event):
-        event.app.exit(result=PROFILE_CHANGE)
-
-    kb_map = {
-        "toggle": [{"key": "tab", "func": _exit_tab}],
-    }
+    choices = [{"name": "[cyan]↩  Change profile[/cyan]", "value": PROFILE_CHANGE}]
+    choices += [{"name": _row(j), "value": j} for j in running]
+    if running and others:
+        choices.append({"name": " ", "disabled": ""})
+    choices += [{"name": _row(j), "value": j} for j in others]
 
     return inquirer.select(
-        message="Choose instance:",
-        choices=choices,
-        keybindings=kb_map,  # <- pass the mapping, not KeyBindings()
-        vi_mode=False,
+        message="Choose instance:", choices=choices, vi_mode=False
     ).execute()
